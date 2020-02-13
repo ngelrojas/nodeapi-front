@@ -1,14 +1,15 @@
 import React from 'react'
+import {Redirect} from 'react-router-dom'
 
-class SignUp extends React.Component {
+class SignIn extends React.Component {
   constructor() {
     super()
     this.state = {
-      name: '',
       email: '',
       password: '',
       error: '',
-      open: false,
+      redirectToReferer: false,
+      loading: false,
     }
   }
 
@@ -19,8 +20,8 @@ class SignUp extends React.Component {
     })
   }
 
-  signup = user => {
-    return fetch('http://localhost:4001/signup', {
+  signin = user => {
+    return fetch('http://localhost:4001/signin', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -34,50 +35,54 @@ class SignUp extends React.Component {
       .catch(err => console.log(err))
   }
 
+  authenticate(jwt, next) {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('jwt', JSON.stringify(jwt))
+      next()
+    }
+  }
+
   handleSubmit = event => {
     event.preventDefault()
-    const {name, email, password} = this.state
+    this.setState({loading: true})
+    const {email, password} = this.state
     const user = {
-      name,
       email,
       password,
     }
-    this.signup(user).then(data => {
-      if (data.error) this.setState({error: data.error})
-      else
-        this.setState({
-          error: '',
-          name: '',
-          email: '',
-          password: '',
-          open: true,
+    this.signin(user).then(data => {
+      if (data.error) {
+        this.setState({error: data.error, loading: false})
+      } else {
+        this.authenticate(data, () => {
+          this.setState({redirectToReferer: true})
         })
+      }
     })
   }
 
   render() {
-    const {name, email, password, error, open} = this.state
+    const {email, password, error, redirectToReferer, loading} = this.state
+
+    if (redirectToReferer) {
+      return <Redirect to="/" />
+    }
     return (
       <div className="container">
-        <h2 className="mt-5 mb-5">signup</h2>
+        <h2 className="mt-5 mb-5">SignIn</h2>
         <div
           className="alert alert-danger"
           style={{display: error ? '' : 'none'}}>
           {error}
         </div>
-        <div className="alert alert-info" style={{display: open ? '' : 'none'}}>
-          New account is successfully created. Please Sign In.
-        </div>
-        <form onSubmit={this.handleSubmit}>
-          <div className="form-group">
-            <label className="text-muted">Name</label>
-            <input
-              onChange={this.handleChange('name')}
-              type="text"
-              value={name}
-              className="form-control"
-            />
+        {loading ? (
+          <div className="jumbotron text-center">
+            <h2>loading...</h2>
           </div>
+        ) : (
+          ''
+        )}
+        <form onSubmit={this.handleSubmit}>
           <div className="form-group">
             <label className="text-muted">Email</label>
             <input
@@ -99,7 +104,7 @@ class SignUp extends React.Component {
           <div className="form-group">
             <input
               type="submit"
-              value="signup"
+              value="signin"
               className="btn bt-raised btn-primary"
             />
           </div>
@@ -109,4 +114,4 @@ class SignUp extends React.Component {
   }
 }
 
-export default SignUp
+export default SignIn
